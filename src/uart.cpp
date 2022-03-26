@@ -2,54 +2,55 @@
 #include<cstring>
 #include<thread>
 
-#include"dev_deal.h"
+#include<serial/serial.h>
 
 using namespace std;
-
-void readData(int fd)
+using namespace serial;
+void readData(Serial *fd)
 {
-    char receBuf[200];
+    string receBuf;
     while(1)
     {
-        if(DevRead(fd,receBuf,sizeof(receBuf))>0)
+        if(fd->waitReadable())
         {
-            // printf("%d\n",strlen(receBuf));
-            printf("Recieve data : %s",receBuf);
-            memset(receBuf,0,sizeof(receBuf));
-            // usleep(500);
+            receBuf=fd->readline();
+            printf("Recieve data : %s",receBuf.c_str());
+            fd->flushInput();
+            receBuf.clear();
         }
     }
 }
 
 int main(int argc,char **argv)
 {
-    int fd,nread;
-    char inData[200];
-    char dev[30];
-    if(argc==1)strcpy(dev,"/dev/ttyACM0");
+    string dev,inData;
+    if(argc==1)dev="/dev/ttyACM0";
     else if(argc==2)
     {
-        strcpy(dev,"/dev/");
-        strcat(dev,argv[1]);
+        dev+="/dev/";
+        dev.append(argv[1]);
     }
     else
     {
         puts("input too much!");
         return -1;
     }
-    // printf("%s",dev);
-    fd=InitDev(dev);
-    if(fd<0)return -1;
-    // thread th1(readData,fd);
-    // th1.detach();
+    Serial fd(dev,115200U,Timeout(0,10000U,0,0,0));
+    if(!fd.isOpen())
+    {
+        puts("Open failed.");
+        return -1;
+    }
+    fd.flush();
+    thread th1(readData,&fd);
+    th1.detach();
     while(1)
     {
-        cin.getline(inData,200);
-        // getchar();
-        strcat(inData,"\r\n");
-        // printf("%s",inData);
-        DevWrite(fd,inData,strlen(inData));
-        memset(inData,0,sizeof(inData));
+        getline(cin,inData);
+        inData+="\r\n";
+        fd.write(inData);
+        // fd.flushOutput();
+        inData.clear();
     }
     return 0;
 }
