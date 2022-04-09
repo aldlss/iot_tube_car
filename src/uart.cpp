@@ -26,19 +26,25 @@ void readData(Serial *fd)
 int controlCar(Car& fd,int lean)
 {
     array<int,4>data{},before{};//0=aheadLeft,1=aheadRight,2=ahead,4=behind
-    tie<int,int,int,int>(data[0],data[2],data[1],data[3])=fd.getDistance();
+    tie<int,int,int,int>(before[0],before[2],before[1],before[3])=fd.getDistance();
+    for(int i=0;i<=1;++i)if(!before[i])before[i]=0x3F3F3F3F;
     while(1)
     {
         if(!running)return 0;
-        // tie<int,int,int,int>(before[0],before[2],before[1],before[3])=fd.getDistance();
-        
+        fd.carForward(10);
+        usleep(1000);
+        tie<int,int,int,int>(data[0],data[2],data[1],data[3])=fd.getDistance();
         if(data[0]+data[2]+data[1]+data[3]!=0)
         {
-            if(data[lean]<20)fd.carTurn(0.1,lean^1);//0.175
-            else if(data[lean]>40)fd.carTurn(0.1,lean);
+            // if(data[lean]<20)fd.carTurn(0.1,lean^1);//0.175
+            // else if(data[lean]>40)fd.carTurn(0.1,lean);
+            for(int i=0;i<=1;++i)if(!before[i])data[i]=0x3F3F3F3F;
+            if(data[lean]-before[lean]>data[lean^1]-before[lean^1])
+                fd.carTurn(0.1,lean);
+            else if(data[lean]-before[lean]<data[lean^1]-before[lean^1])
+                fd.carTurn(0.1,lean^1);
+            before=data;
         }
-        usleep(1000);
-        fd.carForward(10);
         usleep(1000);
     }
 }
