@@ -2,10 +2,12 @@
 #include<cstring>
 #include<thread>
 
+#include<unistd.h>
 #include<serial/serial.h>
-
+#include"ctrl_car.h"
 using namespace std;
 using namespace serial;
+bool running;
 void readData(Serial *fd)
 {
     string receBuf;
@@ -21,6 +23,25 @@ void readData(Serial *fd)
     }
 }
 
+int controlCar(Car& fd,int lean)
+{
+    array<int,4>data{},before{};//0=aheadLeft,1=aheadRight,2=ahead,4=behind
+    tie<int,int,int,int>(data[0],data[2],data[1],data[3])=fd.getDistance();
+    while(1)
+    {
+        if(!running)return 0;
+        // tie<int,int,int,int>(before[0],before[2],before[1],before[3])=fd.getDistance();
+        
+        if(data[0]+data[2]+data[1]+data[3]!=0)
+        {
+            if(data[lean]<20)fd.carTurn(0.1,lean^1);//0.175
+            else if(data[lean]>40)fd.carTurn(0.1,lean);
+        }
+        usleep(1000);
+        fd.carForward(10);
+        usleep(1000);
+    }
+}
 int main(int argc,char **argv)
 {
     string dev,inData;
@@ -42,15 +63,41 @@ int main(int argc,char **argv)
         return -1;
     }
     fd.flush();
-    thread th1(readData,&fd);
-    th1.detach();
+    // thread th1(readData,&fd);
+    // th1.detach();
+    Car car1(&fd);
+    // thread th2(controlCar,ref(car1),CAR_LEFT);
     while(1)
     {
         getline(cin,inData);
-        inData+="\r\n";
-        fd.write(inData);
+        if(inData[0]=='s')
+            car1.carForward(-10);
+        else if(inData[0]=='w')
+            car1.carForward(10);
+        else if(inData[0]=='y'&&!running)
+        {
+            thread th2(controlCar,ref(car1),CAR_LEFT);
+            th2.detach();
+            running=true;
+        }
+        else if(inData[0]=='n')running=false;
+        else if(inData[0]=='p')
+        {
+            int a,b,c,d;
+            tie<int,int,int,int>(a,b,c,d)=car1.getDistance();
+            printf("%d %d %d %d\n",a,b,c,d);
+        }
+        else if(inData[0]=='u')break;
+        else
+        {
+            inData+="\r\n";
+            fd.write(inData);
+        }
+        // inData+="\r\n";
+        // fd.write(inData);
         // fd.flushOutput();
         inData.clear();
     }
+    fd.close();
     return 0;
 }

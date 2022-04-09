@@ -1,4 +1,5 @@
 add_rules("mode.debug", "mode.release")
+set_languages("cxx14")
 
 target("car")
     set_kind("binary")
