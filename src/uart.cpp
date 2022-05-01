@@ -26,15 +26,15 @@ void readData(Serial *fd)
 
 int controlCar(Car& fd,int lean)
 {
-    array<int,4>data{},before{};//0=aheadLeft,1=aheadRight,2=ahead,4=behind
+    array<int,4>data{},before{};//0=aheadLeft,1=aheadRight,2=ahead,3=behind
     tie<int,int,int,int>(before[0],before[2],before[1],before[3])=fd.getDistance();
     printf("l:%d r:%d\n",before[0],before[1]);
     for(int i=0;i<=1;++i)if(!before[i])before[i]=200;
     while(1)
     {
         if(!running)return 0;
-        fd.carForward(10);
-        usleep(500000);
+        fd.carForward(5);
+        usleep(1500000);
         tie<int,int,int,int>(data[0],data[2],data[1],data[3])=fd.getDistance();
         printf("l:%d r:%d\n",data[0],data[1]);
         if(data[0]+data[2]+data[1]+data[3]!=0)
